@@ -18,21 +18,13 @@
 	import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 	import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 	import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+	import { damp, degToRad } from 'three/src/math/MathUtils.js';
 
 	let planeRef; //check intersection with objects
-	let sphereRef; //Bird
+	let player; //Bird
 	let pillarRef;
 
 	const { scene, camera, renderer } = useThrelte();
-	let intersectionPoint;
-	let translY = 0;
-	let translAccelleration = 0;
-
-	let angleZ = 0;
-	let angleAccelleration = 0;
-
-	let pmrem = new PMREMGenerator(renderer);
-	let envMapRT;
 
 	const composer = new EffectComposer(renderer);
 	composer.setSize(innerWidth, innerHeight);
@@ -49,69 +41,53 @@
 	};
 
 	useRender(({ scene }) => {
-		if (intersectionPoint) {
-			const targetY = intersectionPoint?.y || 0;
-			translAccelleration += (targetY - translY) * 0.002; // stiffness
-			translAccelleration *= 0.95; // damping
-			translY += translAccelleration;
-
-			const dir = intersectionPoint
-				.clone()
-				.sub(new Vector3(0, translY, 0))
-				.normalize();
-			const dirCos = dir.dot(new Vector3(0, 1, 0));
-			const angle = Math.acos(dirCos) - Math.PI * 0.5;
-			angleAccelleration += (angle - angleZ) * 0.01; //stiffness
-			angleAccelleration *= 0.75; //damping -> without this its super reactive
-			angleZ += angleAccelleration;
-		}
-
-		//Reflections/postprocessing
-		// if (envMapRT) envMapRT.dispose();
-		// spaceshipRef.visible = false;
-		// scene.background = null;
-		// envMapRT=pmrem.fromScene(scene,0, 0.1, 1000);
-		// scene.background = new Color('#598889').multiplyScalar(0.05);
-		// spaceshipRef.visible = true;
-
-		// spaceshipRef.traverse((child) => {
-		// 	if (child?.material?.envMapIntensity) {
-		// 		child.material.envMap = envMapRT.texture;
-		// 		child.material.envMapIntensity = 100;
-		// 		child.material.normalScale.set(0.3, 0.3);
-		// 	}
-		// });
 
 		composer.render();
 	});
 
-	const gravityAcc = -0.1;
-	let yVel = 0;
-	let upwardAcc = 2;
+	const gravityAcc = -30;
+	const upwardAcc = 3;
+
 	let xAcc = 0;
 
-	useTask((delta) => {
-		yVel += gravityAcc;
-		xAcc += 0.1;
+	//spring motion/damping -> s.t we do not just teleport the player but, it has a smooth motion over time
+	let yVel = 0; //velocity
+	let y = 0; //position
+	const damping = 0.9;
+	const stiffness = 0.02
+
+
+	useTask((delta) => { //ran every frame -> used for game logic, can be throttled
+		updatePlayerYPos(delta);
 	});
 	onMount(() => {
+		//this section only runs once on creation
 		setupEffectComposer();
-
-		/**
-		 * On keyboard "space" click, an upward velocity is added to the yVel
-		 * Spring motion must be added such that there is a stiffness and damping
-		 * @param event
-		 */
-		function onclick(event) {
-			yVel += upwardAcc;
-			const keys = new KeyboardEvent('space');
-		}
-		window.addEventListener('click', onclick);
-		return () => {
-			window.addEventListener('Click', onclick);
-		};
 	});
+
+	function updatePlayerYPos(delta) {
+		yVel += gravityAcc * delta;
+
+		yVel *= damping;
+
+		y += yVel * delta;
+	}
+
+
+	/**
+	 * On keyboard "space" click, an upward velocity is added to the yVel
+	 * Spring motion must be added such that there is a stiffness and damping
+	 * @param event
+	 */
+	function onClick(event) {
+		y += upwardAcc;
+	}
+	function handleKeyDown(event) {
+		y += upwardAcc;
+	}
 </script>
+
+<svelte:window on:keydown={handleKeyDown} on:click={onClick}/>
 
 <T.PerspectiveCamera makeDefault position.x={-5 + xAcc} position.y={6} position.z={10} fov={40}>
 	<OrbitControls enableZoom={false} />
@@ -135,7 +111,7 @@
 	<T.MeshBasicMaterial color={[1, 0, 1]} transparent opacity={0.25} />
 </T.Mesh>
 
-<T.Mesh position.x={-1 + xAcc} position.z={0} bind:ref={sphereRef} visible={true} position.y={yVel}>
+<T.Mesh position.x={-1 + xAcc} position.z={0} bind:ref={player} visible={true} position.y={y}>
 	<T.SphereGeometry args={[0.1, 20, 20]} />
 	<T.MeshBasicMaterial color={[1, 0, 0]} />
 </T.Mesh>
