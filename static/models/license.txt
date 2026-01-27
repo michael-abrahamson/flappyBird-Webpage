@@ -1,0 +1,11 @@
+Model Information:
+* title:	Metal Asteroid
+* source:	https://sketchfab.com/3d-models/metal-asteroid-e797509df35547599e7801b3cf72731a
+* author:	Full Circle CS Inc. (https://sketchfab.com/fullcirclecs)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Metal Asteroid" (https://sketchfab.com/3d-models/metal-asteroid-e797509df35547599e7801b3cf72731a) by Full Circle CS Inc. (https://sketchfab.com/fullcirclecs) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
