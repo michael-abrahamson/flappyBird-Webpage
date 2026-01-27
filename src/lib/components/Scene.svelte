@@ -46,7 +46,7 @@
 	});
 
 	const gravityAcc = -30;
-	const upwardAcc = 3;
+	const upwardAcc = 20;
 
 	let xAcc = 0;
 
@@ -80,10 +80,10 @@
 	 * @param event
 	 */
 	function onClick(event) {
-		y += upwardAcc;
+		yVel += upwardAcc;
 	}
 	function handleKeyDown(event) {
-		y += upwardAcc;
+		yVel += upwardAcc;
 	}
 </script>
 
