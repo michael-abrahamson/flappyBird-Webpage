@@ -13,6 +13,7 @@
 		CylinderGeometry,
 		PMREMGenerator
 	} from 'three';
+	import * as THREE from 'three';
 	import { onMount } from 'svelte';
 	import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 	import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -24,7 +25,9 @@
 
 	let planeRef: any; //check intersection with objects
 	let player: any; //Bird
-	let pillarRef: any;
+	let pillarRef: any; //obstacles
+	let groundRef: any; //ground plane
+	let ceilingRef: any; //ceiling plane
 
 	const { scene, camera, renderer } = useThrelte();
 
@@ -67,12 +70,18 @@
 
 	//spring damping -> s.t we do not just teleport the player but, it has a smooth motion over time
 	let yVel = 0; //velocity
-	let y = 0; //position
+	let y = 1; //position
 	const damping = 0.9;
+
+	// rotation of spaceship
+	let angleZ = 0;
+
 
 	useTask((delta) => {
 		//ran every frame -> used for game logic, can be throttled
 		updatePlayerYPos(delta);
+		updatePlayerAngle(delta);
+		collisionDetection();
 
 		obstacleSpawnTimer += delta;
 		if (obstacleSpawnTimer >= obstacleSpawnInterval) {
@@ -105,6 +114,20 @@
 		yVel *= damping;
 
 		y += yVel * delta;
+	}
+
+	function updatePlayerAngle(delta: number) {
+		const targetAngle = degToRad(-30) * (yVel / upwardAcc);
+		angleZ = damp(angleZ, targetAngle, 5, delta);
+	}
+
+	function collisionDetection() {
+		// basic collision detection between player + obstacles
+		// const playerBox = new THREE.Box3().setFromObject(player);
+		// Check collision with ground and ceiling
+		if (y < -3.2 || y > 3.6) {
+			console.log('Collision with ground or ceiling detected');
+		}
 	}
 
 
@@ -148,12 +171,22 @@
 	visible={false}
 />
 
-<T.Mesh bind:ref={planeRef} visible={false}>
+<T.Mesh bind:ref={planeRef} visible={false}> // invisible plane for raycasting
 	<T.PlaneGeometry args={[20, 20]} />
 	<T.MeshBasicMaterial color={[1, 0, 1]} transparent opacity={0.25} />
 </T.Mesh>
 
-{#each obstacles as obstacle}
+<T.Mesh visible={true} bind:ref={groundRef} position={[0, -3.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+	<T.PlaneGeometry args={[50, 5]} />
+	<T.MeshBasicMaterial color={[0.1, 0.2, 0.1]} />
+</T.Mesh> //plane for ground layer
+
+<T.Mesh visible={true} bind:ref={ceilingRef} position={[0, 3.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
+	<T.PlaneGeometry args={[50, 5]} />
+	<T.MeshBasicMaterial color={[0.1, 0.1, 0.1]} />
+</T.Mesh> //plane for ceiling layer
+
+{#each obstacles as obstacle} // pillars /obstacles
 	<T.Mesh position={[obstacle.pos.x, obstacle.pos.y, obstacle.pos.z]}>
 		<T.CylinderGeometry args={[0.4, 0.4, 2]} />
 		<T.MeshBasicMaterial color={obstacle.color} />
@@ -162,7 +195,7 @@
 
 <JediStarFighter
 	scale={0.4}
-	rotation={[0, -Math.PI / 2, -Math.PI / 2]}
+	rotation={[angleZ, -Math.PI / 2, -Math.PI / 2]}
 	bind:ref={player}
 	position={[-1, y, 0]}
 />
