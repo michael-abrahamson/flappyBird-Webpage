@@ -22,6 +22,7 @@
 	import { damp, degToRad } from 'three/src/math/MathUtils.js';
 	import JediStarFighter from './models/scene.svelte';
 	import Asteroid from './models/asteroid.svelte';
+	import { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 
 	let planeRef: any; //check intersection with objects
 	let player: any; //Bird
@@ -73,14 +74,10 @@
 	let y = 1; //position
 	const damping = 0.9;
 
-	// rotation of spaceship
-	let angleZ = 0;
-
-
 	useTask((delta) => {
 		//ran every frame -> used for game logic, can be throttled
 		updatePlayerYPos(delta);
-		updatePlayerAngle(delta);
+		updatePlayerTilt(delta);
 		collisionDetection();
 
 		obstacleSpawnTimer += delta;
@@ -94,8 +91,6 @@
 			if (obstacle.pos.x <= -10) {
 				removeObstacle(obstacles.indexOf(obstacle));
 			}
-
-			
 		});
 		obstacles = obstacles;
 	});
@@ -116,21 +111,33 @@
 		y += yVel * delta;
 	}
 
-	function updatePlayerAngle(delta: number) {
-		const targetAngle = degToRad(-30) * (yVel / upwardAcc);
-		angleZ = damp(angleZ, targetAngle, 5, delta);
-	}
-
 	function collisionDetection() {
 		// basic collision detection between player + obstacles
-		// const playerBox = new THREE.Box3().setFromObject(player);
+		const playerBox = new THREE.Box3().setFromObject(player);
+		obstacles.forEach((obstacle) => {
+			// loop through obstacles
+		});
 		// Check collision with ground and ceiling
 		if (y < -3.2 || y > 3.6) {
 			console.log('Collision with ground or ceiling detected');
 		}
 	}
+	const MAX_TILT = degToRad(30);
+	const TILT_SPEED = 6;
+	let tiltGroup: THREE.Group;
 
+	function updatePlayerTilt(delta: number) {
+		// tilt the player based on yVel
+		if (!tiltGroup) return;
 
+		//normalize vector to [-1, 1]
+		const velNorm = THREE.MathUtils.clamp(yVel / upwardAcc, -1, 1);
+		const targetTilt = yVel > 0 ? velNorm * MAX_TILT : velNorm * MAX_TILT * 0.6;
+		// negative -> up is nose up
+
+		//smooth interpolation
+		tiltGroup.rotation.z = damp(tiltGroup.rotation.z, targetTilt, TILT_SPEED, delta);
+	}
 
 	/**
 	 * On keyboard "space" click, an upward velocity is added to the yVel
@@ -155,9 +162,7 @@
 	fov={50}
 	enableZoom={false}
 	enablePan={false}
->
-
-</T.PerspectiveCamera>
+></T.PerspectiveCamera>
 <T.DirectionalLight intensity={1.8} position={[0, 10, 0]} castShadow shadow.bias={-0.0001} />
 <T.AmbientLight intensity={0.2} />
 
@@ -171,7 +176,8 @@
 	visible={false}
 />
 
-<T.Mesh bind:ref={planeRef} visible={false}> // invisible plane for raycasting
+<T.Mesh bind:ref={planeRef} visible={false}>
+	// invisible plane for raycasting
 	<T.PlaneGeometry args={[20, 20]} />
 	<T.MeshBasicMaterial color={[1, 0, 1]} transparent opacity={0.25} />
 </T.Mesh>
@@ -186,16 +192,18 @@
 	<T.MeshBasicMaterial color={[0.1, 0.1, 0.1]} />
 </T.Mesh> //plane for ceiling layer
 
-{#each obstacles as obstacle} // pillars /obstacles
+{#each obstacles as obstacle}
+	// pillars /obstacles
 	<T.Mesh position={[obstacle.pos.x, obstacle.pos.y, obstacle.pos.z]}>
 		<T.CylinderGeometry args={[0.4, 0.4, 2]} />
 		<T.MeshBasicMaterial color={obstacle.color} />
 	</T.Mesh>
 {/each}
-
-<JediStarFighter
-	scale={0.4}
-	rotation={[angleZ, -Math.PI / 2, -Math.PI / 2]}
-	bind:ref={player}
-	position={[-1, y, 0]}
-/>
+<T.Group bind:ref={player} position={[-1, y, 0]}>
+	<T.Group bind:ref={tiltGroup}>
+		<T.AxesHelper args={[2]} />
+		<T.Group >
+			<JediStarFighter scale={0.4}  rotation={[0, -Math.PI / 2, -Math.PI / 2]}/>
+		</T.Group>
+	</T.Group>
+</T.Group>
