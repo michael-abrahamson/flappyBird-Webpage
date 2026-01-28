@@ -111,7 +111,7 @@
 			star.pos.y *= 0.995;
 			star.pos.z += star.speed * delta * 0.15;
 
-			if (star.pos.x > 40) resetStar(star);
+			if (star.pos.x > 17) resetStar(star);
 
 			star.speed = THREE.MathUtils.damp(star.speed, 30, 2, delta);
 		});
@@ -197,7 +197,7 @@
 	// section where we will generate stars i.e the light flashes decorating the scene
 	let colors = ['#EAF6FF', '#CDEBFF', '#9FD6FF', '#5FB8FF', '#2F9BFF'];
 
-	const MAX_STARS = 800;
+	const MAX_STARS = 2000;
 	let stars: any[] = [];
 	for (let i = 0; i < MAX_STARS; i++) {
 		let star = {
@@ -216,7 +216,7 @@
 	 * @param star
 	 */
 	function resetStar(star: any) {
-		star.pos = new Vector3(randomRange(-15, -45), randomRange(-2.2, 8), randomRange(-10, -80));
+		star.pos = new Vector3(randomRange(-15, -45), randomRange(-6, 8), randomRange(-10, -80));
 
 		const depth = THREE.MathUtils.mapLinear(star.pos.z, -10, -80, 1, 0);
 
@@ -242,7 +242,8 @@
 	fov={50}
 	enableZoom={false}
 	enablePan={false}
-></T.PerspectiveCamera>
+>
+</T.PerspectiveCamera> 
 <T.DirectionalLight intensity={1.8} position={[0, 10, 0]} castShadow shadow.bias={-0.0001} />
 <T.AmbientLight intensity={0.2} />
 
