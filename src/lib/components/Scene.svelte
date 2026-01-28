@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { T, useRender, useThrelte, useFrame, useTask } from '@threlte/core';
-	import { ContactShadows, Float, Grid, OrbitControls } from '@threlte/extras';
+	import {
+		ContactShadows,
+		Float,
+		Grid,
+		OrbitControls,
+		Instance,
+		InstancedMesh,
+		useTexture
+	} from '@threlte/extras';
 	import {
 		MeshBasicMaterial,
 		PlaneGeometry,
@@ -32,6 +40,9 @@
 
 	const { scene, camera, renderer } = useThrelte();
 
+	scene.background = new Color('#02040A');
+	scene.fog = new THREE.Fog('#02040A', 8, 35);
+
 	const composer = new EffectComposer(renderer);
 	composer.setSize(innerWidth, innerHeight);
 
@@ -39,7 +50,7 @@
 		const renderPass = new RenderPass(scene, camera.current);
 		composer.addPass(renderPass);
 
-		const bloomPass = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.275, 1, 0);
+		const bloomPass = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.6,0.81, 0.15);
 		composer.addPass(bloomPass);
 
 		const outputPass = new OutputPass();
@@ -93,6 +104,18 @@
 			}
 		});
 		obstacles = obstacles;
+		stars.forEach((star) => {
+			star.pos.x += star.speed * delta;
+
+			// Below creates a tunnel like effect, pulling the stars towards the camera
+			star.pos.y *= 0.995;
+			star.pos.z += star.speed * delta * 0.15;
+
+			if (star.pos.x > 40) resetStar(star);
+
+			star.speed = THREE.MathUtils.damp(star.speed, 30, 2, delta);
+		});
+		stars = stars;
 	});
 	onMount(() => {
 		//this section only runs once on creation
@@ -146,10 +169,22 @@
 	 */
 	function onClick(event: any) {
 		yVel += upwardAcc;
+
+		stars.forEach((star) => {
+			star.speed *= 1.2;
+			star.len *= 1.1;
+		});
 	}
 	function handleKeyDown(event: any) {
 		yVel += upwardAcc;
+
+		stars.forEach((star) => {
+			star.speed *= 1.2;
+			star.len *= 1.1;
+		});
 	}
+	
+
 	/**
 	 * Generates a random number between min and max
 	 * @param min
@@ -160,25 +195,40 @@
 	}
 
 	// section where we will generate stars i.e the light flashes decorating the scene
+	let colors = ['#EAF6FF', '#CDEBFF', '#9FD6FF', '#5FB8FF', '#2F9BFF'];
 
-	const MAX_STARS = 500;
+	const MAX_STARS = 800;
 	let stars: any[] = [];
 	for (let i = 0; i < MAX_STARS; i++) {
 		let star = {
 			pos: null,
 			len: null,
 			color: null,
-			speed: null
+			speed: null,
+			thickness: null
 		};
 
 		stars.push(resetStar(star));
 	}
+
 	/**
 	 * Here we will provide the stars with values
 	 * @param star
 	 */
-	function resetStar(star) {
+	function resetStar(star: any) {
+		star.pos = new Vector3(randomRange(-15, -45), randomRange(-2.2, 8), randomRange(-10, -80));
 
+		const depth = THREE.MathUtils.mapLinear(star.pos.z, -10, -80, 1, 0);
+
+		star.len = randomRange(1, 2) * depth;
+		star.thickness = randomRange(0.1, 0.2) * depth;
+
+		star.speed = randomRange(20, 30) * depth;
+		star.rad = randomRange(0.001, 0.002);
+		star.color = new Color(colors[Math.floor(Math.random() * colors.length)])
+			.convertSRGBToLinear()
+			.multiplyScalar(1.6);
+		return star;
 	}
 </script>
 
@@ -212,13 +262,18 @@
 	<T.MeshBasicMaterial color={[1, 0, 1]} transparent opacity={0.25} />
 </T.Mesh>
 
-<T.Mesh visible={true} bind:ref={groundRef} position={[0, -3.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-	<T.PlaneGeometry args={[50, 5]} />
+<T.Mesh
+	visible={false}
+	bind:ref={groundRef}
+	position={[0, -3.2, 0]}
+	rotation={[-Math.PI / 2, 0, 0]}
+>
+	<T.PlaneGeometry args={[50, 1]} />
 	<T.MeshBasicMaterial color={[0.1, 0.2, 0.1]} />
 </T.Mesh> //plane for ground layer
 
-<T.Mesh visible={true} bind:ref={ceilingRef} position={[0, 3.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
-	<T.PlaneGeometry args={[50, 5]} />
+<T.Mesh visible={false} bind:ref={ceilingRef} position={[0, 3.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
+	<T.PlaneGeometry args={[50, 1]} />
 	<T.MeshBasicMaterial color={[0.1, 0.1, 0.1]} />
 </T.Mesh> //plane for ceiling layer
 
@@ -232,8 +287,21 @@
 <T.Group bind:ref={player} position={[-1, y, 0]}>
 	<T.Group bind:ref={tiltGroup}>
 		<T.AxesHelper args={[2]} />
-		<T.Group >
-			<JediStarFighter scale={0.4}  rotation={[0, -Math.PI / 2, -Math.PI / 2]}/>
+		<T.Group>
+			<JediStarFighter scale={0.4} rotation={[0, -Math.PI / 2, -Math.PI / 2]} />
 		</T.Group>
 	</T.Group>
 </T.Group>
+
+<InstancedMesh limit={MAX_STARS} range={MAX_STARS}>
+	<T.PlaneGeometry args={[1, 0.05]} />
+	<T.MeshBasicMaterial transparent depthWrite={false}/>
+
+	{#each stars as star}
+		<Instance
+			position={[star.pos.x, star.pos.y, star.pos.z]}
+			scale={[star.len, star.thickness, 1]}
+			color={star.color}
+		/>
+	{/each}
+</InstancedMesh>
