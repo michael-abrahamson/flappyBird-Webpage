@@ -150,6 +150,36 @@
 	function handleKeyDown(event: any) {
 		yVel += upwardAcc;
 	}
+	/**
+	 * Generates a random number between min and max
+	 * @param min
+	 * @param max
+	 */
+	function randomRange(min: number, max: number) {
+		return Math.random() * (max - min) + min;
+	}
+
+	// section where we will generate stars i.e the light flashes decorating the scene
+
+	const MAX_STARS = 500;
+	let stars: any[] = [];
+	for (let i = 0; i < MAX_STARS; i++) {
+		let star = {
+			pos: null,
+			len: null,
+			color: null,
+			speed: null
+		};
+
+		stars.push(resetStar(star));
+	}
+	/**
+	 * Here we will provide the stars with values
+	 * @param star
+	 */
+	function resetStar(star) {
+
+	}
 </script>
 
 <svelte:window on:keydown={handleKeyDown} on:click={onClick} />
