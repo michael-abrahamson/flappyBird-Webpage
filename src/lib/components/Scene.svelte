@@ -7,7 +7,7 @@
 		OrbitControls,
 		Instance,
 		InstancedMesh,
-		useTexture
+		useTexture, Text
 	} from '@threlte/extras';
 	import {
 		MeshBasicMaterial,
@@ -50,7 +50,7 @@
 		const renderPass = new RenderPass(scene, camera.current);
 		composer.addPass(renderPass);
 
-		const bloomPass = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.6,0.81, 0.15);
+		const bloomPass = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.6, 0.81, 0.15);
 		composer.addPass(bloomPass);
 
 		const outputPass = new OutputPass();
@@ -67,14 +67,37 @@
 	let obstacles: any[] = [];
 	const obstacleSpeed = 5; //units per second
 
+	// Handling y level of pipe spawning + gap
+	const PIPE_GAP = 2;
+	const MAX_Y = 3.6;
+	const MIN_Y = -3.2;
+	const PIPE_HEIGHT = 10;
+
+	const MIN_GAP_CENTER = MIN_Y + PIPE_GAP / 2;
+
+	const MAX_GAP_CENTER = MAX_Y - PIPE_GAP / 2;
+
 	function spawnObstacles() {
-		let obstacle = {
-			pos: new Vector3(12, Math.random() * 6 - 3, 0), //later on this wil be changed to spawn pipes similar to flappy bird with a minimum gap
-			len: new Vector3(1, 1, 1),
+		// Handling Position of Center Gap
+		const gapCenterY = randomRange(MIN_GAP_CENTER, MAX_GAP_CENTER);
+		const bottomPipeY = gapCenterY - PIPE_GAP / 2 - PIPE_HEIGHT / 2; // /2 to account for half height of pipes
+		const topPipeY = gapCenterY + PIPE_GAP / 2 + PIPE_HEIGHT / 2;
+
+		let topPipe = {
+			pos: new Vector3(15, topPipeY, 0),
 			speed: obstacleSpeed,
-			color: new Color(0xff0000)
+			color: new Color('#228B22'),
+			len: new Vector3(1, 1, 1)
 		};
-		obstacles.push(obstacle);
+		let bottomPipe = {
+			pos: new Vector3(15, bottomPipeY, 0),
+			speed: obstacleSpeed,
+			color: new Color('#228B22'),
+			len: new Vector3(1, 1, 1)
+		};
+
+		obstacles.push(topPipe);
+		obstacles.push(bottomPipe);
 	}
 
 	const gravityAcc = -30;
@@ -183,7 +206,6 @@
 			star.len *= 1.1;
 		});
 	}
-	
 
 	/**
 	 * Generates a random number between min and max
@@ -197,7 +219,7 @@
 	// section where we will generate stars i.e the light flashes decorating the scene
 	let colors = ['#EAF6FF', '#CDEBFF', '#9FD6FF', '#5FB8FF', '#2F9BFF'];
 
-	const MAX_STARS = 2000;
+	const MAX_STARS = 800;
 	let stars: any[] = [];
 	for (let i = 0; i < MAX_STARS; i++) {
 		let star = {
@@ -234,6 +256,10 @@
 
 <svelte:window on:keydown={handleKeyDown} on:click={onClick} />
 
+
+
+
+
 <T.PerspectiveCamera
 	makeDefault
 	position.x={4}
@@ -242,8 +268,7 @@
 	fov={50}
 	enableZoom={false}
 	enablePan={false}
->
-</T.PerspectiveCamera> 
+></T.PerspectiveCamera>
 <T.DirectionalLight intensity={1.8} position={[0, 10, 0]} castShadow shadow.bias={-0.0001} />
 <T.AmbientLight intensity={0.2} />
 
@@ -281,8 +306,10 @@
 {#each obstacles as obstacle}
 	// pillars /obstacles
 	<T.Mesh position={[obstacle.pos.x, obstacle.pos.y, obstacle.pos.z]}>
-		<T.CylinderGeometry args={[0.4, 0.4, 2]} />
-		<T.MeshBasicMaterial color={obstacle.color} />
+		<T.CylinderGeometry args={[0.45, 0.45, PIPE_HEIGHT]} />
+		<T.MeshBasicMaterial color={obstacle.color} metalness={0.8} roughness={0.3} />
+		<T.CylinderGeometry args={[0.35, 0.35, PIPE_HEIGHT * 0.98]} />
+		<T.MeshBasicMaterial color="#4fd3ff" transparent opacity={0.85} />
 	</T.Mesh>
 {/each}
 <T.Group bind:ref={player} position={[-1, y, 0]}>
@@ -296,7 +323,7 @@
 
 <InstancedMesh limit={MAX_STARS} range={MAX_STARS}>
 	<T.PlaneGeometry args={[1, 0.05]} />
-	<T.MeshBasicMaterial transparent depthWrite={false}/>
+	<T.MeshBasicMaterial transparent depthWrite={false} />
 
 	{#each stars as star}
 		<Instance
