@@ -372,7 +372,7 @@
 {/each}
 <T.Group bind:ref={player} position={[-1, y, 0]}>
 	<T.Group bind:ref={tiltGroup}>
-		<T.AxesHelper args={[2]} />
+		<!-- <T.AxesHelper args={[2]} /> -->
 		<T.Group>
 			<JediStarFighter scale={0.4} rotation={[0, -Math.PI / 2, -Math.PI / 2]} />
 		</T.Group>
