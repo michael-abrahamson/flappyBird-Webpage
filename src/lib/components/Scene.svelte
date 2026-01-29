@@ -219,7 +219,7 @@
 	// section where we will generate stars i.e the light flashes decorating the scene
 	let colors = ['#EAF6FF', '#CDEBFF', '#9FD6FF', '#5FB8FF', '#2F9BFF'];
 
-	const MAX_STARS = 800;
+	const MAX_STARS = 1300;
 	let stars: any[] = [];
 	for (let i = 0; i < MAX_STARS; i++) {
 		let star = {
