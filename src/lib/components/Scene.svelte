@@ -7,7 +7,8 @@
 		OrbitControls,
 		Instance,
 		InstancedMesh,
-		useTexture, Text
+		useTexture,
+		Text
 	} from '@threlte/extras';
 	import {
 		MeshBasicMaterial,
@@ -68,10 +69,16 @@
 	const obstacleSpeed = 5; //units per second
 
 	// Handling y level of pipe spawning + gap
-	const PIPE_GAP = 2;
+	const PIPE_GAP = 3;
 	const MAX_Y = 3.6;
 	const MIN_Y = -3.2;
 	const PIPE_HEIGHT = 10;
+
+	const PLAYER_RADIUS = 0.35;
+
+	// Pipe collision size
+	const PIPE_RADIUS = 0.45;
+	const PIPE_HALF_HEIGHT = PIPE_HEIGHT / 2;
 
 	const MIN_GAP_CENTER = MIN_Y + PIPE_GAP / 2;
 
@@ -98,6 +105,37 @@
 
 		obstacles.push(topPipe);
 		obstacles.push(bottomPipe);
+	}
+	/**
+	 * Box surrounding player (HitBox)
+	 */
+	function getPlayerAABB() {
+		return {
+			minX: -1 - PLAYER_RADIUS,
+			maxX: -1 + PLAYER_RADIUS,
+			minY: y - PLAYER_RADIUS,
+			maxY: y + PLAYER_RADIUS
+		};
+	}
+	/**
+	 * Hit Box for pipes
+	 * @param pipe
+	 */
+	function getPipeAABB(pipe: any) {
+		return {
+			minX: pipe.pos.x - PIPE_RADIUS,
+			maxX: pipe.pos.x + PIPE_RADIUS,
+			minY: pipe.pos.y - PIPE_HALF_HEIGHT,
+			maxY: pipe.pos.y + PIPE_HALF_HEIGHT
+		};
+	}
+	/**
+	 * If player collides with pipe
+	 * @param a
+	 * @param b
+	 */
+	function aabbIntersect(a: any, b: any) {
+		return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
 	}
 
 	const gravityAcc = -30;
@@ -159,14 +197,38 @@
 
 	function collisionDetection() {
 		// basic collision detection between player + obstacles
-		const playerBox = new THREE.Box3().setFromObject(player);
-		obstacles.forEach((obstacle) => {
-			// loop through obstacles
-		});
+		//const playerBox = new THREE.Box3().setFromObject(player); //expensive, better to use AABB
+
 		// Check collision with ground and ceiling
-		if (y < -3.2 || y > 3.6) {
-			console.log('Collision with ground or ceiling detected');
+		const playerBox = getPlayerAABB();
+
+		// Ground / ceiling
+		if (playerBox.minY < MIN_Y || playerBox.maxY > MAX_Y) {
+			console.log('collided with ground/ceiling');
+			gameOver();
+			return;
 		}
+
+		// Pipes
+		for (const obstacle of obstacles) {
+			const pipeBox = getPipeAABB(obstacle);
+
+			if (aabbIntersect(playerBox, pipeBox)) {
+				console.log('collided with pipe');
+				gameOver();
+				return;
+			}
+		}
+	}
+
+	function gameOver() {
+		console.log('GAME OVER');
+
+		yVel = 0;
+		obstacles.length = 0;
+		y = 1;
+
+		//pause Game or restart or showUI -> TBD
 	}
 	const MAX_TILT = degToRad(30);
 	const TILT_SPEED = 6;
@@ -219,7 +281,7 @@
 	// section where we will generate stars i.e the light flashes decorating the scene
 	let colors = ['#EAF6FF', '#CDEBFF', '#9FD6FF', '#5FB8FF', '#2F9BFF'];
 
-	const MAX_STARS = 1300;
+	const MAX_STARS = 800;
 	let stars: any[] = [];
 	for (let i = 0; i < MAX_STARS; i++) {
 		let star = {
@@ -255,10 +317,6 @@
 </script>
 
 <svelte:window on:keydown={handleKeyDown} on:click={onClick} />
-
-
-
-
 
 <T.PerspectiveCamera
 	makeDefault
